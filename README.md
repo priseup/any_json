@@ -5,10 +5,13 @@
 // 中附上总用时，参阅的关键资料链接；然后把仓库地址发给我。
 
 
-花费10小时左右：
-	Any类实现4小时
-	反射部分6小时
+>花费10小时左右：   
+	>>Any类实现4小时  
+	>>考虑如何获取结构体成员类型及名称及反射部分6小时  
 
 
-// https://blog.csdn.net/qq_40946921/article/details/90646022及c++17的Any类接口-------参考实现Any类
-// https://cloud.tencent.com/developer/article/1524775------参考实现反射的方式，获取结构体字段的名称
+https://blog.csdn.net/qq_40946921/article/details/90646022及c++17的Any类接口
+		-------参考实现Any类  
+		
+https://cloud.tencent.com/developer/article/1524775
+		------参考实现反射的方式，获取结构体字段的名称
