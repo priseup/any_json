@@ -1,27 +1,43 @@
 ﻿#include "any.h"
-#include "types.h"
+// #include "types.h"
 
-void test()
+void test_any()
 {
-    std::string info = "{\"id\":\"1111111\",\"cards\":[0,1,2,3,4,5,6,7,8,9],\"jiaoDiZhu\":\"\"}";
+    int i = 0;
+    Any a{5};
+    Any g{i};
+    Any f{std::move(i)};
+    Any b(std::string{"345"});
+    const Any &c = a;
+    std::cout << a.cast<int>() << std::endl;
+    std::cout << c.cast<int>() << std::endl;
 
-    rapidjson::Document doc;
-    doc.Parse<0>(info.c_str());
+    Any d{a};
+    Any e{std::move(a)};
+    printf("d=f\n");
+    d = f;
 
-    rapidjson::Value &dataArray = doc["cards"];
+    printf("d=c\n");
+    d = c;
 
-    if (dataArray.IsArray())
-    {
-        for (rapidjson::SizeType i = 0; i < dataArray.Size(); i++)
-        {
-            const rapidjson::Value& object = dataArray[i];
+    printf("d=move(f)\n");
+    d = std::move(f);
 
-            printf("%d\n",object.GetInt());
-        }
-    }
+    printf("d=5.6\n");
+    d = 5.6;
+
+    const std::string &dd = std::string{"string"};
+    printf("d=dd\n");
+    d = dd;
+
+    std::cout << b.cast<std::string>() << std::endl;
+
+    Any v = std::vector<int>{1, 2, 3, 4};
+    std::cout << v.cast<std::vector<int>>().size() << std::endl;
 }
 
 int main() {
+    /*
     Friend f1{"my best friend", Singer{"rocker", 18}};
     Friend f2{"new friend", "little girl"};
 
@@ -36,5 +52,7 @@ int main() {
     std::cout << p1 << std::endl     // 打印 Person 对象
     auto pp = parse(json);           // 反序列化
     assert(p1 == pp)                 // 反序列化的结果是对的
+    */
+
 }
 

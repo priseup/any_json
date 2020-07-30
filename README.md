@@ -1,4 +1,4 @@
-// 目标：实现一个支持 json 序列化/反序列化、支持 std::cout 输出的 any 类型
+﻿// 目标：实现一个支持 json 序列化/反序列化、支持 std::cout 输出的 any 类型
 // 要求：基于 C++11/C++14，采用 json 序列化库 Tencent/rapidjson
 
 // 时间不限，最晚下周一之前，把源码上传到你的 github，仓库 readme 

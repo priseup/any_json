@@ -1,6 +1,4 @@
-﻿// 目标：实现一个支持 json 序列化/反序列化、支持 std::cout 输出的 any 类型
-// 要求：基于 C++11/C++14，采用 json 序列化库 Tencent/rapidjson
-#include <memory>
+﻿#include <memory>
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -8,115 +6,71 @@
 #include <typeinfo>
 #include <type_traits>
 #include <algorithm>
-#include "reflection.h"
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/stringbuffer.h"
-
-enum class Type
-{
-    tint,
-    tbool,
-    tdouble,
-    tstring,
-    tobject,
-    tarray
-};
-
-std::map<std::string, Type> types = {{"int", tint},
-                                     {"bool", tbool},
-                                     {"double", tdouble},
-                                     {"string", tstring},
-                                     {"object", tobject},
-                                     {"array", tarray}};
 
 class Any
 {
-    friend std::ostream &operator<<(std::ostream &o, const Any &a);
+// friend std::ostream &operator<<(std::ostream &o, const Any &a);
 public:
     Any()
     {
-        // setup converter (partial)
-        auto int_converter = [](int* field, const std::string& name) {
-          std::cout << name << ": " << *field << std::endl;
-        };
-        auto string_converter = [](std::string* field, const std::string& name) {
-          std::cout << name << ": " << *field << std::endl;
-        };
-        auto double_converter = [](double* field, const std::string& name) {
-          std::cout << name << ": " << *field << std::endl;
-        };
-        auto bool_converter = [](bool* field, const std::string& name) {
-          std::cout << name << ": " << *field << std::endl;
-        };
-        auto bool_converter = [](bool* field, const std::string& name) {
-          std::cout << name << ": " << *field << std::endl;
-        };
-
-        converter.RegisterField(&SimpleStruct::int_, "int",
-                                ValueConverter<int>(int_converter));
-        converter.RegisterField(&SimpleStruct::string_, "string",
-                                ValueConverter<std::string>(string_converter));
-        converter.RegisterField(&SimpleStruct::bool_, "bool",
-                                ValueConverter<bool>(bool_converter));
-        converter.RegisterField(&SimpleStruct::double_, "double",
-                                ValueConverter<double>(double_converter));
-        converter.RegisterField(&NestedStruct::nested_, "object",
-                                ValueConverter<SimpleStruct>(object_converter));
     }
-    Any(const Any &other) : Any()
+    Any(const Any &other)
     {
-        base = other.base->clone();
+        if (other.base)
+        {
+            base.reset(other.base->clone());
+        }
+        printf("call Any(const Any &other)\n");
     }
-    Any(Any &&other): base(other.base)
+    Any(Any &&other): base(std::move(other.base))
     {
-    }
-
-    template <typename T>
-    Any(const T &t) : base(new Data<T>(t))
-    {
+        other.base.reset(nullptr);
+        printf("call Any(Any &&other)\n");
     }
     template <typename T>
-    Any(T &&t) : base(new Data<T>(t))
+    Any(const T &t) : base(new Data<std::decay_t<T>>(t))
     {
+        printf("call const T &\n");
     }
     template <typename T>
-    T any_cast()
+    Any(T &&t,
+        std::enable_if_t<!std::is_same<Any&, T>::value>* = 0, // disable if T has type Any&
+        std::enable_if_t<!std::is_const<T>::value>* = 0)    // disable if T has const T&&
+        : base(new Data<std::decay_t<T>>(std::forward<T>(t)))
+    {
+        printf("call T &&\n");
+    }
+    template <typename T>
+    T cast()
     {
         return dynamic_cast<Data<T>*>(base.get())->value;
     }
 
     Any &operator=(const Any &other)
     {
+        printf("operator=(const Any&)\n");
         Any(other).swap(*this);
         return *this;
     }
     Any &operator=(Any &&other)
     {
+        printf("operator=(Any&&)\n");
         std::swap(base, other.base);
         return *this;
     }
     template <typename T>
     Any &operator=(T &&t)
     {
-        Any(t).swap(*this);
+        printf("operator=(T&&)\n");
+        Any(std::forward<T>(t)).swap(*this);
         return *this;
     }
     template <typename T>
     Any &operator=(const T &t)
     {
+        printf("operator=(const T&)\n");
         Any(t).swap(*this);
         return *this;
-    }
-
-    bool operator==(const Any &other)
-    {
-        return true;
-    }
-    bool operator==(Any &&other)
-    {
-        return true;
     }
 
     Any &swap(Any &other)
@@ -127,40 +81,17 @@ public:
 
     std::string dump() const
     {
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        
-        writer.StartObject();
-        
-        string data = strBuf.GetString();
-        Type t = base->get_type();
-        int i_value = 0;
-        double d_value = 0.0;
-        bool b_value = true;
-        std::string s_value;
+        return "";
+    }
 
-        std::string key;
-        writer.Key(key);
-        switch (t)
-        {
-        case Type::tint:
-            writer.Int();
-        case Type::tdouble:
-            writer.Double();
-        case Type::tbool:
-            writer.Bool();
-        case Type::tstring:
-            writer.String();
-        case Type::tarray:
-            writer.StartArray();
-            writer.EndArray();
-        case Type::tobject:
-            writer.StartObject();
-            writer.EndObject();
-        }
+    bool empty() const
+    {
+        return !base;
+    }
 
-        writer.EndObject();
-
-        return buffer.GetString();
+    const std::type_info &type() const
+    {
+        return base ? base->type() : typeid(void);
     }
 
 private:
@@ -168,8 +99,8 @@ private:
     {
     public:
         virtual ~Base() {}
-        virtual Base *clone() {}
-        virutal Type get_type() {}
+        virtual Base *clone() const = 0;
+        virtual const std::type_info &type() const = 0;
     };
     template <typename T>
     class Data : public Base
@@ -177,44 +108,37 @@ private:
     public:
         Data(const T &t) : value(t)
         {}
-        Data(T &&t) : value(t)
+        Data(T &&t) : value(std::move(t))
+        {}
+        virtual ~Data()
         {}
 
-        Base *clone()
+        Base *clone() const override
         {
-            T *r = new T(value);
-            return r;
+            return new Data(value);
         }
-        Type get_type()
+        const std::type_info &type() const override
         {
-            return types[typeid(value).name()];
+            return typeid(T);
         }
-
-        bool operator==(const T &v)
-        {
-            return value == v.value;
-        }
-
-        friend std::ostream &operator<<(std::ostream &o, const T &t);
 
         T value;
     };
 
 private:
     std::unique_ptr<Base> base;
-
-    rapidjson::StringBuffer buffer;
-    StructValueConverter<SimpleStruct> converter;
 };
 
-std::ostream &operator<<(std::ostream &o, const T &t)
-{
-   o << t;
-   return o;
-}
-
+/*
 std::ostream &operator<<(std::ostream &o, const Any &a)
 {
-    o << dynamic_cast<Data<T>*>(a.base.get())->value;
-    return o;
+    if (a->type().hash_code() == typeid(int).hash_code())
+    {
+        return o << a.cast<int>();
+    }
+    else if (a->type().hash_code() == typeid(float).hash_code())
+    {
+        return o << a.cast<float>();
+    }
 }
+*/

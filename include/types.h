@@ -3,6 +3,26 @@
 #include <vector>
 #include <string>
 
+enum class Type : unsigned char
+{
+    NONE = 0,
+    BOOLEAN,
+    INTEGER,
+    DOUBLE,
+    STRING,
+    ARRAY,
+    OBJECT
+};
+
+/*
+std::map<std::string, Type> types = {{"int", Type::tint},
+                                     {"bool", Type::tbool},
+                                     {"double", Type::tdouble},
+                                     {"string", Type::tstring},
+                                     {"object", Type::tobject},
+                                     {"array", Type::tarray}};
+                                     */
+
 struct Person;
 
 struct Singer {
